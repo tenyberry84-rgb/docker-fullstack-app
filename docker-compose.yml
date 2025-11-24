@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Database Service
+  db:
+    image: mysql:8.0
+    container_name: fullstack-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: myappdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build: ./backend
+    container_name: fullstack-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: rootpassword
+      DB_NAME: myappdb
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    container_name: fullstack-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+# Volumes (for persistent data)
+volumes:
+  db-data:
+    driver: local

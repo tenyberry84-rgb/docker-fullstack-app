@@ -1,0 +1,28 @@
+# Stage 1: Build stage (install dependencies)
+FROM python:3.9-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    default-libmysqlclient-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --target=/install -r requirements.txt
+
+COPY app.py .
+
+# Stage 2: Runtime stage (no build tools)
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Copy installed Python packages from builder stage
+COPY --from=builder /install /usr/local/lib/python3.9/site-packages
+
+# Copy the app (just the necessary file)
+COPY --from=builder /app/app.py .
+
+EXPOSE 5000
+CMD ["python", "app.py"]
